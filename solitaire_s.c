@@ -96,6 +96,12 @@ int main(int argc, char **argv)
 	   hostp->h_name, 
 	   inet_ntoa(clientaddr.sin_addr));
 
+    // Send a shuffled deck
+    char deck[MAXLINE];
+    deck = "Here is your shuffled deck"
+    write(connfd,deck,strlen(deck)+1);
+
+
     //
     // Get their lines of text and echo them back.
     //
@@ -103,7 +109,7 @@ int main(int argc, char **argv)
     char buffer[MAXLINE];
     while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
       printf("Server received %d bytes from #%d: %s",recvlen,clients,buffer);
-      write(connfd,buffer,strlen(buffer)+1);
+      write(connfd,"sucess",strlen("sucess")+1);
     }
       
     //
