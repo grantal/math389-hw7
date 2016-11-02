@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 
     // Send a shuffled deck
     char deck[MAXLINE];
-    deck = "Here is your shuffled deck"
+    deck = "Here is your shuffled deck";
     write(connfd,deck,strlen(deck)+1);
 
 
