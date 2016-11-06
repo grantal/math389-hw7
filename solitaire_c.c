@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
     int n = read(clientfd, response, MAXLINE);
     printf("%s\n", response);
     //don't do the action unless server okays it 
-    if(n != 0 && strcmp(response,"SUCCESS")){
+    if(n != 0 && strcmp(response,"SUCCESS") == 0){
 
         if (cmd[0] == 'p') {
 
