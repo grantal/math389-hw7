@@ -23,6 +23,7 @@ double drand48(void);
 #define RED   1
 
 char red[]       = {0x1b,0x5b,0x33,0x31,0x6d,0};
+//I changed the black color because it didn't show up in my terminal
 char black[]     = {0x1b,0x5b,0x33,0x32,0x6d,0};
 char neutral[]   = {0x1b,0x5b,0x33,0x39,0x6d,0};
 char whitebg[]   = {0x1b,0x5b,0x33,0x47,0x6d,0};
@@ -108,7 +109,7 @@ int isUp(card_t *c) {
 
 int okOn(card_t *c1, card_t *c2) {
   return ((isRed(c1) && isBlack(c2)) || (isRed(c2) && isBlack(c1)))
-	  && (c1->face +1 == c2->face);
+          && (c1->face +1 == c2->face);
 }
 
 void putRed() {
@@ -121,9 +122,18 @@ void putBlack() {
   printf("%s",black);
 }
 
+
 void putBack() {
   printf("%s",neutral);
   // printf("%s",neutralbg);
+}
+
+void putColorOfSuit(int s) {
+  if (s % 2 == RED) {
+    putRed();
+  } else {
+    putBlack();
+  }
 }
 
 void putSuit(int s) {
@@ -301,6 +311,17 @@ void putStack(stAck_t *stack) {
   }
 }
 
+void putArena(arena_t *A) {
+  for (int s=0; s<4; s++) {
+    putColorOfSuit(s);
+    putSuit(s);
+    putBack();
+    printf(": ");
+    putStack(A->suit[s]);
+    printf("\n");
+  }
+}
+
 void putSolitaire(solitaire_t *S) {
   for (int p=1; p<=7; p++) {
     printf("%d: ",p);
@@ -322,15 +343,15 @@ int play(card_t *card, arena_t *arena, solitaire_t *S) {
   if (isTop(card)) {
     if (isEmpty(pile)) {
       if (isAce(card)) {
-	push(pop(stack),pile);
-	maybeFlip(stack,S);
-	return SUCCESS;
+        push(pop(stack),pile);
+        maybeFlip(stack,S);
+        return SUCCESS;
       }
     } else {
       if (card->face == top(pile)->face+1) {
-	push(pop(stack),pile);
-	maybeFlip(stack,S);
-	return SUCCESS;
+        push(pop(stack),pile);
+        maybeFlip(stack,S);
+        return SUCCESS;
       }
     }
   }
@@ -372,9 +393,9 @@ int moveOnto(card_t *card, card_t *onto, solitaire_t *S) {
     if (isKing(card)) {
       stAck_t *dest = freeLain(S);
       if (isUp(card) && dest != NULL) {
-	printf("going for it\n");
-	move(card,dest,S);
-	return SUCCESS;
+        printf("going for it\n");
+        move(card,dest,S);
+        return SUCCESS;
       }
     }
 
@@ -400,6 +421,7 @@ int main(int argc, char **args) {
   }
   
   while (1) {
+	putArena(A);
     putSolitaire(S);
     char buffer[80];
     fgets(buffer,80,stdin);
@@ -417,9 +439,9 @@ int main(int argc, char **args) {
       sscanf(buffer,"%s %s",cmd,c1);
       card_t *card = cardOf(c1,S);
       if (play(card,A,S)) {
-	printf("Done!\n");
+          printf("Done!\n");
       } else {
-	printf("That card was not played.\n");
+          printf("That card was not played.\n");
       } 
 
     } else if (cmd[0] == 'm') {
@@ -430,9 +452,9 @@ int main(int argc, char **args) {
       //
       sscanf(buffer,"%s %s %s",cmd,c1,c2);
       if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
-	printf("Done.\n");
+        printf("Done.\n");
       } else {
-	printf("That move cannot be made.\n");
+        printf("That move cannot be made.\n");
       }
 
     } else if (cmd[0] == 'n') {
@@ -441,7 +463,7 @@ int main(int argc, char **args) {
       //
       // Draws the next card and puts it on top of the discard pile.
       if (!isEmpty(S->draw)) {
-	push(pop(S->draw),S->discard);
+        push(pop(S->draw),S->discard);
       }
     }
   }
