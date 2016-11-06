@@ -505,6 +505,7 @@ int main(int argc, char **argv) {
     // Read the server's response.
     char response[MAXLINE];
     int n = read(clientfd, response, MAXLINE);
+    printf("%s\n", response);
     //don't do the action unless server okays it 
     if(n != 0 && strcmp(response,"SUCCESS")){
 
