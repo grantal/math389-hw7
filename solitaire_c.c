@@ -481,7 +481,9 @@ int main(int argc, char **argv) {
   // get random seed from server
   char seedstring[MAXLINE];
   int n = read(clientfd, seedstring, MAXLINE);
-  long seed = atol(seedstring);
+  char *ptr;
+  unsigned long seed = strtoul(seedstring, &ptr, 10);
+  printf("seed: %lu\n", seed);
   solitaire_t *S = newSolitaire(seed);
   arena_t *A = newArena();
   

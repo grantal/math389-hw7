@@ -506,13 +506,16 @@ int main(int argc, char **argv) {
 
     // play solitaire
     
-    //make deck and send it
+    //make seed and send it
     struct timeval tp; 
     gettimeofday(&tp,NULL); 
+    unsigned long seed = tp.tv_sec;
     char buffer[MAXLINE];
-    sprintf(buffer, "%lu\n", tp.tv_sec);
+    printf("seed: %lu\n",seed);
+    sprintf(buffer, "%lu", seed);
     write(connfd, buffer,strlen(buffer)+1);
-    solitaire_t *S = newSolitaire(tp.tv_sec);
+    // make deck
+    solitaire_t *S = newSolitaire(seed);
     arena_t *A = newArena();
     
     for (int s=0; s<4; s++) {
