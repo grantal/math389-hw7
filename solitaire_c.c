@@ -500,42 +500,50 @@ int main(int argc, char **argv) {
     sscanf(buffer,"%s",cmd);
 
     // send command to server and validate it
+    write(clientfd,buffer,strlen(buffer)+1);
 
-    if (cmd[0] == 'p') {
+    // Read the server's response.
+    char response[MAXLINE];
+    int n = read(clientfd, response, MAXLINE);
+    //don't do the action unless server okays it 
+    if(n != 0 && strcmp(response,"SUCCESS")){
 
-      // play <card>
-      //
-      // Play a card on top of some stack to the arena.
-      //
-      sscanf(buffer,"%s %s",cmd,c1);
-      card_t *card = cardOf(c1,S);
-      if (play(card,A,S)) {
-          printf("Done!\n");
-      } else {
-          printf("That card was not played.\n");
-      } 
+        if (cmd[0] == 'p') {
 
-    } else if (cmd[0] == 'm') {
+          // play <card>
+          //
+          // Play a card on top of some stack to the arena.
+          //
+          sscanf(buffer,"%s %s",cmd,c1);
+          card_t *card = cardOf(c1,S);
+          if (play(card,A,S)) {
+              printf("Done!\n");
+          } else {
+              printf("That card was not played.\n");
+          } 
 
-      // move <card> <card>
-      //
-      // Move a card to some lain stack. 
-      //
-      sscanf(buffer,"%s %s %s",cmd,c1,c2);
-      if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
-        printf("Done.\n");
-      } else {
-        printf("That move cannot be made.\n");
-      }
+        } else if (cmd[0] == 'm') {
 
-    } else if (cmd[0] == 'n') {
+          // move <card> <card>
+          //
+          // Move a card to some lain stack. 
+          //
+          sscanf(buffer,"%s %s %s",cmd,c1,c2);
+          if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
+            printf("Done.\n");
+          } else {
+            printf("That move cannot be made.\n");
+          }
 
-      // next
-      //
-      // Draws the next card and puts it on top of the discard pile.
-      if (!isEmpty(S->draw)) {
-        push(pop(S->draw),S->discard);
-      }
+        } else if (cmd[0] == 'n') {
+
+          // next
+          //
+          // Draws the next card and puts it on top of the discard pile.
+          if (!isEmpty(S->draw)) {
+            push(pop(S->draw),S->discard);
+          }
+        }
     }
   }
 

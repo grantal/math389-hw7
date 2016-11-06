@@ -521,6 +521,7 @@ int main(int argc, char **argv) {
       
     // main game loop
     int recvlen;
+    char response[MAXLINE];
     while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
             putArena(A);
         putSolitaire(S);
@@ -538,9 +539,9 @@ int main(int argc, char **argv) {
           sscanf(buffer,"%s %s",cmd,c1);
           card_t *card = cardOf(c1,S);
           if (play(card,A,S)) {
-              printf("Done!\n");
+              sprintf(response, "SUCCESS");
           } else {
-              printf("That card was not played.\n");
+              sprintf(response, "FAILURE");
           } 
 
         } else if (cmd[0] == 'm') {
@@ -551,9 +552,9 @@ int main(int argc, char **argv) {
           //
           sscanf(buffer,"%s %s %s",cmd,c1,c2);
           if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
-            printf("Done.\n");
+            sprintf(response, "SUCCESS");
           } else {
-            printf("That move cannot be made.\n");
+            sprintf(response, "FAILURE");
           }
 
         } else if (cmd[0] == 'n') {
@@ -564,8 +565,13 @@ int main(int argc, char **argv) {
           if (!isEmpty(S->draw)) {
             push(pop(S->draw),S->discard);
           }
+          sprintf(response, "SUCCESS");
+        } else {
+          sprintf(response, "FAILURE");
         }
-      }
+        write(connfd, response,strlen(response)+1);
+        printf("%s\n", response);
+    }
       
     //
     // Close the client connection.
