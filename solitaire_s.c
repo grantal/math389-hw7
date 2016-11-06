@@ -524,11 +524,9 @@ int main(int argc, char **argv) {
     while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
             putArena(A);
         putSolitaire(S);
-        char buffer[80];
-        fgets(buffer,80,stdin);
-        char cmd[80];
-        char c1[80];
-        char c2[80];
+        char cmd[MAXLINE];
+        char c1[MAXLINE];
+        char c2[MAXLINE];
         sscanf(buffer,"%s",cmd);
 
         if (cmd[0] == 'p') {
