@@ -266,9 +266,7 @@ arena_t *newArena(void) {
 }
 
 solitaire_t *newSolitaire(time_t tv_sec) {
-  struct timeval tp; 
-  gettimeofday(&tp,NULL); 
-  srand48(tp.tv_sec);
+  srand48(tv_sec);
 
   solitaire_t *S = (solitaire_t *)malloc(sizeof(solitaire_t));
   S->deck = newDeck();
