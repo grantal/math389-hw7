@@ -473,10 +473,7 @@ void *solitaire_session(void *ci) {
     // main game loop
     int recvlen;
     char response[MAXLINE];
-    // the server output will always a step behind the client
-    // output because they listen for instructions at different
-    // times. However, their internal states will in sync
-    // even if it doesnt look like it
+
     while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
         char cmd[MAXLINE];
         char c1[MAXLINE];
