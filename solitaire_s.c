@@ -478,8 +478,6 @@ void *solitaire_session(void *ci) {
     // times. However, their internal states will in sync
     // even if it doesnt look like it
     while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
-            putArena(A);
-        putSolitaire(S);
         char cmd[MAXLINE];
         char c1[MAXLINE];
         char c2[MAXLINE];
@@ -525,7 +523,7 @@ void *solitaire_session(void *ci) {
           sprintf(response, "FAILURE");
         }
         write(connfd, response,strlen(response)+1);
-        printf("%s\n", response);
+        printf("Action %s for client %d\n", response, id);
     }
       
   //
@@ -611,6 +609,7 @@ int main(int argc, char **argv) {
     //
     pthread_t tid;
     pthread_create(&tid,NULL,solitaire_session,(void *)client);
+    clients++;
   }
 
   close(listenfd);
