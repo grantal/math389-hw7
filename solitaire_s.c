@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define MAXLINE     8192
 #define CONNECTIONS 128
@@ -421,6 +422,116 @@ int moveOnto(card_t *card, card_t *onto, solitaire_t *S) {
   return FAILURE;
 }
 
+
+typedef struct _client_t {
+    int id;
+    int connection;
+    struct sockaddr_in address;
+} client_t;
+
+void *solitaire_session(void *ci) {
+  client_t *client = (client_t *)ci;
+
+  int id = client->id;
+  int connfd = client->connection;
+  
+  //
+  // Report the client that connected.
+  //
+  struct hostent *hostp;
+  if ((hostp = gethostbyaddr((const char *)&client->address.sin_addr.s_addr, 
+			     sizeof(struct in_addr), 
+			     AF_INET)) == NULL) {
+    fprintf(stderr, "GETHOSTBYADDR failed for client %d.",id);
+  }
+  
+  printf("Accepted connection from client %d %s (%s)\n", 
+	 id, 
+	 hostp->h_name, 
+	 inet_ntoa(client->address.sin_addr));
+  
+  //
+  // Play Solitaire
+  //
+    
+    //make seed and send it
+    struct timeval tp; 
+    gettimeofday(&tp,NULL); 
+    unsigned long seed = tp.tv_sec;
+    char buffer[MAXLINE];
+    printf("seed: %lu\n",seed);
+    sprintf(buffer, "%lu", seed);
+    write(connfd, buffer,strlen(buffer)+1);
+    // make deck
+    solitaire_t *S = newSolitaire(seed);
+    arena_t *A = newArena();
+    
+    for (int s=0; s<4; s++) {
+      A->suit[s] = newStack(s);
+    }
+      
+    // main game loop
+    int recvlen;
+    char response[MAXLINE];
+
+    while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
+        char cmd[MAXLINE];
+        char c1[MAXLINE];
+        char c2[MAXLINE];
+        sscanf(buffer,"%s",cmd);
+
+        if (cmd[0] == 'p') {
+
+          // play <card>
+          //
+          // Play a card on top of some stack to the arena.
+          //
+          sscanf(buffer,"%s %s",cmd,c1);
+          card_t *card = cardOf(c1,S);
+          if (play(card,A,S)) {
+              sprintf(response, "SUCCESS");
+          } else {
+              sprintf(response, "FAILURE");
+          } 
+
+        } else if (cmd[0] == 'm') {
+
+          // move <card> <card>
+          //
+          // Move a card to some lain stack. 
+          //
+          sscanf(buffer,"%s %s %s",cmd,c1,c2);
+          if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
+            sprintf(response, "SUCCESS");
+          } else {
+            sprintf(response, "FAILURE");
+          }
+
+        } else if (cmd[0] == 'n') {
+
+          // next
+          //
+          // Draws the next card and puts it on top of the discard pile.
+          if (!isEmpty(S->draw)) {
+            push(pop(S->draw),S->discard);
+          }
+          sprintf(response, "SUCCESS");
+        } else {
+          sprintf(response, "FAILURE");
+        }
+        write(connfd, response,strlen(response)+1);
+        printf("Action %s for client %d\n", response, id);
+    }
+      
+  //
+  // Close the client connection.
+  //
+  close(connfd);
+
+  return NULL;
+    
+}
+
 int main(int argc, char **argv) {
 
   // 
@@ -474,116 +585,28 @@ int main(int argc, char **argv) {
   // Handle client sessions.
   //
   while (1) {
-    
+    //
+    // Build a client's profile to send to a handler thread.
+    //
+    client_t *client = (client_t *)malloc(sizeof(client_t));
+
     //
     // Accept a connection from a client, get a file descriptor for communicating
     // with the client.
     //
+    client->id = clients;
     socklen_t acceptlen = sizeof(struct sockaddr_in);
-    struct sockaddr_in clientaddr;
-    int connfd;
-    if ((connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &acceptlen)) < 0) {
+    if ((client->connection = accept(listenfd, (struct sockaddr *)&client->address, &acceptlen)) < 0) {
       fprintf(stderr,"ACCEPT failed.\n");
       exit(-1);
     }
 
-
     //
-    // Report the client that connected.
+    // Create a thread to handle the client.
     //
-    struct hostent *hostp;
-    if ((hostp = gethostbyaddr((const char *)&clientaddr.sin_addr.s_addr, 
-			       sizeof(struct in_addr), 
-			       AF_INET)) == NULL) {
-      fprintf(stderr, "GETHOSTBYADDR failed.");
-    }
-    
-    clients = clients + 1;
-    printf("Accepted connection from client %d %s (%s)\n", 
-	   clients, 
-	   hostp->h_name, 
-	   inet_ntoa(clientaddr.sin_addr));
-
-    // play solitaire
-    
-    //make seed and send it
-    struct timeval tp; 
-    gettimeofday(&tp,NULL); 
-    unsigned long seed = tp.tv_sec;
-    char buffer[MAXLINE];
-    printf("seed: %lu\n",seed);
-    sprintf(buffer, "%lu", seed);
-    write(connfd, buffer,strlen(buffer)+1);
-    // make deck
-    solitaire_t *S = newSolitaire(seed);
-    arena_t *A = newArena();
-    
-    for (int s=0; s<4; s++) {
-      A->suit[s] = newStack(s);
-    }
-      
-    // main game loop
-    int recvlen;
-    char response[MAXLINE];
-    // the server output will always a step behind the client
-    // output because they listen for instructions at different
-    // times. However, their internal states will in sync
-    // even if it doesnt look like it
-    while ((recvlen = read(connfd, buffer, MAXLINE)) != 0) {
-            putArena(A);
-        putSolitaire(S);
-        char cmd[MAXLINE];
-        char c1[MAXLINE];
-        char c2[MAXLINE];
-        sscanf(buffer,"%s",cmd);
-
-        if (cmd[0] == 'p') {
-
-          // play <card>
-          //
-          // Play a card on top of some stack to the arena.
-          //
-          sscanf(buffer,"%s %s",cmd,c1);
-          card_t *card = cardOf(c1,S);
-          if (play(card,A,S)) {
-              sprintf(response, "SUCCESS");
-          } else {
-              sprintf(response, "FAILURE");
-          } 
-
-        } else if (cmd[0] == 'm') {
-
-          // move <card> <card>
-          //
-          // Move a card to some lain stack. 
-          //
-          sscanf(buffer,"%s %s %s",cmd,c1,c2);
-          if (moveOnto(cardOf(c1,S),cardOf(c2,S),S)) {
-            sprintf(response, "SUCCESS");
-          } else {
-            sprintf(response, "FAILURE");
-          }
-
-        } else if (cmd[0] == 'n') {
-
-          // next
-          //
-          // Draws the next card and puts it on top of the discard pile.
-          if (!isEmpty(S->draw)) {
-            push(pop(S->draw),S->discard);
-          }
-          sprintf(response, "SUCCESS");
-        } else {
-          sprintf(response, "FAILURE");
-        }
-        write(connfd, response,strlen(response)+1);
-        printf("%s\n", response);
-    }
-      
-    //
-    // Close the client connection.
-    //
-    close(connfd);
+    pthread_t tid;
+    pthread_create(&tid,NULL,solitaire_session,(void *)client);
+    clients++;
   }
 
   close(listenfd);
