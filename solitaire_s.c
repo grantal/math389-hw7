@@ -435,20 +435,6 @@ void *solitaire_session(void *ci) {
   int id = client->id;
   int connfd = client->connection;
   
-  //
-  // Report the client that connected.
-  //
-  struct hostent *hostp;
-  if ((hostp = gethostbyaddr((const char *)&client->address.sin_addr.s_addr, 
-			     sizeof(struct in_addr), 
-			     AF_INET)) == NULL) {
-    fprintf(stderr, "GETHOSTBYADDR failed for client %d.",id);
-  }
-  
-  printf("Accepted connection from client %d %s (%s)\n", 
-	 id, 
-	 hostp->h_name, 
-	 inet_ntoa(client->address.sin_addr));
   
   //
   // Play Solitaire
@@ -606,6 +592,7 @@ int main(int argc, char **argv) {
   *extflag = 0;
 
   // make thread to listen for start
+  pthread_mutex_init(&f,NULL);
   pthread_t listener_id;
   pthread_create(&listener_id,NULL,start_listener,(void *)extflag);
 
@@ -629,6 +616,21 @@ int main(int argc, char **argv) {
       fprintf(stderr,"ACCEPT failed.\n");
       exit(-1);
     }
+    //
+    // Report the client that connected.
+    //
+    struct hostent *hostp;
+    if ((hostp = gethostbyaddr((const char *)&client->address.sin_addr.s_addr, 
+  			     sizeof(struct in_addr), 
+  			     AF_INET)) == NULL) {
+      fprintf(stderr, "GETHOSTBYADDR failed for client %d.",client->id);
+    }
+    
+    printf("Accepted connection from client %d %s (%s)\n", 
+	 client->id, 
+	 hostp->h_name, 
+	 inet_ntoa(client->address.sin_addr));
+
     // add client to array
     clientarray[clients] = client;
     clients++;
@@ -639,13 +641,19 @@ int main(int argc, char **argv) {
     pthread_mutex_unlock(&f);
   }
 
+  pthread_t ids[clients];
+
   // Create threads to handle the clients.
   for (int i = 0; i < clients; i++){
     pthread_t tid;
     pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
-
+    ids[i] = tid;
   }
-    
+
+  // wait for threads to finish    
+  for (int i = 0; i < clients; i++){
+    pthread_join(ids[i],NULL);
+  }
 
   close(listenfd);
   exit(0);
