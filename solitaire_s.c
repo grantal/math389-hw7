@@ -532,6 +532,22 @@ void *solitaire_session(void *ci) {
     
 }
 
+pthread_mutex_t f;
+
+// thread to listen for the server to press enter to start the game 
+// it will set flag to 1 when the server presses enter
+void *start_listener(void *fg) {
+    int *flag = (int *)fg;
+    char buffer[MAXLINE];
+    // wait for something from stdin
+    fgets(buffer,MAXLINE,stdin);
+    // set flag
+    pthread_mutex_lock(&f);
+    *flag = 1;  
+    pthread_mutex_unlock(&f);
+}
+
+
 int main(int argc, char **argv) {
 
   // 
@@ -580,11 +596,24 @@ int main(int argc, char **argv) {
   fprintf(stderr,"Solitaire server listening on port %d...\n",port);
   
   int clients = 0;
+  client_t *clientarray[CONNECTIONS];
+
+  // flag to start game. One version is internal so the while loop
+  // can check it, and one is exernal and will update the internal
+  // one
+  int *extflag = (int *)malloc(sizeof(int));
+  int intflag = 0;
+  *extflag = 0;
+
+  // make thread to listen for start
+  pthread_t listener_id;
+  pthread_create(&listener_id,NULL,start_listener,(void *)extflag);
+
 
   //
-  // Handle client sessions.
+  // accept clients and add them to list.
   //
-  while (1) {
+  while (intflag == 0) {
     //
     // Build a client's profile to send to a handler thread.
     //
@@ -600,14 +629,23 @@ int main(int argc, char **argv) {
       fprintf(stderr,"ACCEPT failed.\n");
       exit(-1);
     }
-
-    //
-    // Create a thread to handle the client.
-    //
-    pthread_t tid;
-    pthread_create(&tid,NULL,solitaire_session,(void *)client);
+    // add client to array
+    clientarray[clients] = client;
     clients++;
+
+    // check for start
+    pthread_mutex_lock(&f);
+    intflag = *extflag;  
+    pthread_mutex_unlock(&f);
   }
+
+  // Create threads to handle the clients.
+  for (int i = 0; i < clients; i++){
+    pthread_t tid;
+    pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
+
+  }
+    
 
   close(listenfd);
   exit(0);
