@@ -518,19 +518,64 @@ void *solitaire_session(void *ci) {
     
 }
 
-pthread_mutex_t f;
 
-// thread to listen for the server to press enter to start the game 
-// it will set flag to 1 when the server presses enter
-void *start_listener(void *fg) {
-    int *flag = (int *)fg;
-    char buffer[MAXLINE];
-    // wait for something from stdin
-    fgets(buffer,MAXLINE,stdin);
-    // set flag
-    pthread_mutex_lock(&f);
-    *flag = 1;  
-    pthread_mutex_unlock(&f);
+typedef struct _clistener_t {
+    pthread_mutex_t cam;
+    client_t **clientarray;
+    int *clients;
+    int listenfd;
+} clistener_t;
+
+// will add clients to the client array until the main thread 
+// cancels this thread
+void *client_listen(void *cl) {
+  clistener_t *cli = (clistener_t *)cl;
+  pthread_mutex_t cam = cli->cam; 
+  client_t **clientarray = cli->clientarray; 
+  int listenfd = cli->listenfd;
+  int clients = 0;
+  //
+  // accept clients and add them to list.
+  //
+  while (1) {
+    //
+    // Build a client's profile to send to a handler thread.
+    //
+    client_t *client = (client_t *)malloc(sizeof(client_t));
+
+    //
+    // Accept a connection from a client, get a file descriptor for communicating
+    // with the client.
+    //
+    client->id = clients;
+    socklen_t acceptlen = sizeof(struct sockaddr_in);
+    if ((client->connection = accept(listenfd, (struct sockaddr *)&client->address, &acceptlen)) < 0) {
+      fprintf(stderr,"ACCEPT failed.\n");
+      exit(-1);
+    }
+    pthread_mutex_lock(&cam);
+    //
+    // Report the client that connected.
+    //
+    struct hostent *hostp;
+    if ((hostp = gethostbyaddr((const char *)&client->address.sin_addr.s_addr, 
+  			     sizeof(struct in_addr), 
+  			     AF_INET)) == NULL) {
+      fprintf(stderr, "GETHOSTBYADDR failed for client %d.",client->id);
+    }
+    
+    printf("Accepted connection from client %d %s (%s)\n", 
+	 client->id, 
+	 hostp->h_name, 
+	 inet_ntoa(client->address.sin_addr));
+
+    // add client to array
+    clientarray[clients] = client;
+    clients++;
+    *(cli->clients) = clients;
+
+    pthread_mutex_unlock(&cam);
+  }
 }
 
 
@@ -582,64 +627,30 @@ int main(int argc, char **argv) {
   fprintf(stderr,"Solitaire server listening on port %d...\n",port);
   
   int clients = 0;
-  client_t *clientarray[CONNECTIONS];
+  client_t **clientarray = (client_t **)malloc(CONNECTIONS*sizeof(client_t *));
 
-  // flag to start game. One version is internal so the while loop
-  // can check it, and one is exernal and will update the internal
-  // one
-  int *extflag = (int *)malloc(sizeof(int));
-  int intflag = 0;
-  *extflag = 0;
 
-  // make thread to listen for start
-  pthread_mutex_init(&f,NULL);
+  // make thread to listen for client connections
+  pthread_mutex_t cam;
+  pthread_mutex_init(&cam,NULL);
+  clistener_t *cli = (clistener_t *)malloc(sizeof(clistener_t));
+  cli->clientarray = clientarray;
+  cli->cam = cam;
+  cli->clients = &clients;
+  cli->listenfd = listenfd;
   pthread_t listener_id;
-  pthread_create(&listener_id,NULL,start_listener,(void *)extflag);
+  pthread_create(&listener_id,NULL,client_listen,(void *)cli);
 
 
-  //
-  // accept clients and add them to list.
-  //
-  while (intflag == 0) {
-    //
-    // Build a client's profile to send to a handler thread.
-    //
-    client_t *client = (client_t *)malloc(sizeof(client_t));
+  // wait for something from stdin
+  char buffer[MAXLINE];
+  fgets(buffer,MAXLINE,stdin);
 
-    //
-    // Accept a connection from a client, get a file descriptor for communicating
-    // with the client.
-    //
-    client->id = clients;
-    socklen_t acceptlen = sizeof(struct sockaddr_in);
-    if ((client->connection = accept(listenfd, (struct sockaddr *)&client->address, &acceptlen)) < 0) {
-      fprintf(stderr,"ACCEPT failed.\n");
-      exit(-1);
-    }
-    //
-    // Report the client that connected.
-    //
-    struct hostent *hostp;
-    if ((hostp = gethostbyaddr((const char *)&client->address.sin_addr.s_addr, 
-  			     sizeof(struct in_addr), 
-  			     AF_INET)) == NULL) {
-      fprintf(stderr, "GETHOSTBYADDR failed for client %d.",client->id);
-    }
-    
-    printf("Accepted connection from client %d %s (%s)\n", 
-	 client->id, 
-	 hostp->h_name, 
-	 inet_ntoa(client->address.sin_addr));
-
-    // add client to array
-    clientarray[clients] = client;
-    clients++;
-
-    // check for start
-    pthread_mutex_lock(&f);
-    intflag = *extflag;  
-    pthread_mutex_unlock(&f);
-  }
+  // cancel listener thread, but not if its currently adding a client
+  pthread_mutex_lock(&cam);
+  pthread_cancel(listener_id);
+  pthread_mutex_unlock(&cam);
+  
 
   pthread_t ids[clients];
 
