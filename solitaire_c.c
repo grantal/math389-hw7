@@ -462,10 +462,10 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-
   unsigned char *ip;
   ip = (unsigned char *)&serveraddr.sin_addr.s_addr;
-
+  // confirm connection worked
+  printf("Connected to Solitaire server at %d.%d.%d.%d. Waiting for server to start game.\n", ip[0], ip[1], ip[2], ip[3]);
 
   // get random seed from server
   char seedstring[MAXLINE];
