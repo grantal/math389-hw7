@@ -348,19 +348,10 @@ int play(card_t *card, arena_t *arena, solitaire_t *S) {
   stAck_t *stack = card->stack;
   stAck_t *pile = arena->suit[card->suit];
   if (isTop(card)) {
-    if (isEmpty(pile)) {
-      if (isAce(card)) {
-        push(pop(stack),pile);
-        maybeFlip(stack,S);
-        return SUCCESS;
-      }
-    } else {
-      if (card->face == top(pile)->face+1) {
-        push(pop(stack),pile);
-        maybeFlip(stack,S);
-        return SUCCESS;
-      }
-    }
+    // leave validation of arena to server
+    pop(stack);
+    maybeFlip(stack,S);
+    return SUCCESS;
   }
   return FAILURE;
 }
@@ -490,7 +481,6 @@ int main(int argc, char **argv) {
   }
   
   while (1) {
-	putArena(A);
     putSolitaire(S);
     char buffer[MAXLINE];
     fgets(buffer,MAXLINE,stdin);
