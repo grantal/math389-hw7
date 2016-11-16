@@ -31,6 +31,9 @@ double drand48(void);
 #define FAILURE 0
 #define SUCCESS (!FAILURE)
 
+#define PLAYER 0
+#define LURKER (!PLAYER)
+
 #define BLACK 0
 #define RED   1
 
@@ -439,6 +442,7 @@ typedef struct _client_t {
     struct sockaddr_in address;
     arena_t *A;
     pthread_mutex_t arem; //arena mutex
+    int type; // ie player or lurker
 } client_t;
 
 void *solitaire_session(void *ci) {
@@ -474,7 +478,6 @@ void *solitaire_session(void *ci) {
         char c1[MAXLINE];
         char c2[MAXLINE];
         sscanf(buffer,"%s",cmd);
-        putArena(A);
 
         if (cmd[0] == 'p') {
           // mutex for interacting with arena
@@ -565,7 +568,19 @@ void *client_listen(void *cl) {
       fprintf(stderr,"ACCEPT failed.\n");
       exit(-1);
     }
+    // mutex is all the way up here so we don't start the game while
+    // a client is connecting
     pthread_mutex_lock(&cam);
+    // see if client is lurker
+    int recvlen;
+    char buffer[MAXLINE];
+    recvlen = read(client->connection,  buffer, MAXLINE);
+    if (strcmp("PLAYER", buffer) == 0){
+        client->type = PLAYER; 
+    } else if (strcmp("LURKER", buffer) == 0){
+        client->type = LURKER;
+    }
+
     //
     // Report the client that connected.
     //
