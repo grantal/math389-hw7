@@ -358,9 +358,8 @@ int play(card_t *card, arena_t *arena, solitaire_t *S) {
   if (isTop(card)) {
     // the number of decks 'card' can go into is the same as the
     // number of players. We must check all of these decks. 
-    int playernum = (arena->suitlen)/4;
     for (int i = card->suit; i < arena->suitlen; i += 4){ 
-      stAck_t *pile = arena->suit[card->suit];
+      stAck_t *pile = arena->suit[i];
       if (isEmpty(pile)) {
         if (isAce(card)) {
           push(pop(stack),pile);
@@ -669,6 +668,7 @@ int main(int argc, char **argv) {
 
   // Create threads to handle the clients.
   for (int i = 0; i < clients; i++){
+    clientarray[i]->A = A;
     pthread_t tid;
     pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
     ids[i] = tid;
