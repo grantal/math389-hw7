@@ -329,8 +329,8 @@ void putStack(stAck_t *stack) {
 
 void putArena(arena_t *A) {
   for (int s=0; s<A->suitlen; s++) {
-    putColorOfSuit(s);
-    putSuit(s);
+    putColorOfSuit(s%4);
+    putSuit(s%4);
     putBack();
     printf(": ");
     putStack(A->suit[s]);
@@ -474,6 +474,7 @@ void *solitaire_session(void *ci) {
         char c1[MAXLINE];
         char c2[MAXLINE];
         sscanf(buffer,"%s",cmd);
+        putArena(A);
 
         if (cmd[0] == 'p') {
           // mutex for interacting with arena
