@@ -438,6 +438,7 @@ typedef struct _client_t {
     int connection;
     struct sockaddr_in address;
     arena_t *A;
+    pthread_mutex_t arem; //arena mutex
 } client_t;
 
 void *solitaire_session(void *ci) {
@@ -445,6 +446,7 @@ void *solitaire_session(void *ci) {
 
   int id = client->id;
   int connfd = client->connection;
+  pthread_mutex_t arem = client->arem;
   
   
   //
@@ -474,6 +476,8 @@ void *solitaire_session(void *ci) {
         sscanf(buffer,"%s",cmd);
 
         if (cmd[0] == 'p') {
+          // mutex for interacting with arena
+          pthread_mutex_lock(&arem);
 
           // play <card>
           //
@@ -486,7 +490,7 @@ void *solitaire_session(void *ci) {
           } else {
               sprintf(response, "FAILURE");
           } 
-
+          pthread_mutex_unlock(&arem);
         } else if (cmd[0] == 'm') {
 
           // move <card> <card>
@@ -657,6 +661,7 @@ int main(int argc, char **argv) {
   pthread_mutex_lock(&cam);
   pthread_cancel(listener_id);
   pthread_mutex_unlock(&cam);
+
   
   // make arena
   arena_t *A = newArena(clients);
@@ -664,11 +669,16 @@ int main(int argc, char **argv) {
     A->suit[s] = newStack(s);
   }
 
+  pthread_mutex_t arem; //arena mutex
+  pthread_mutex_init(&arem,NULL);
+
   pthread_t ids[clients];
 
   // Create threads to handle the clients.
   for (int i = 0; i < clients; i++){
+    // add arena and arena mutex
     clientarray[i]->A = A;
+    clientarray[i]->arem = arem;
     pthread_t tid;
     pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
     ids[i] = tid;
