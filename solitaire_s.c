@@ -68,7 +68,9 @@ typedef struct _stAck_t {
 } stAck_t;
 
 typedef struct _arena_t {
-  stAck_t *suit[4];
+  int suitlen;
+  // dont know how big arena will be
+  stAck_t *suit[];
 } arena_t;
 
 typedef struct _solitaire_t {
@@ -260,11 +262,15 @@ void shuffleInto(deck_t *deck, stAck_t *draw) {
   }
 }
 
-arena_t *newArena(void) {
-  arena_t *A = malloc(sizeof(arena_t));
-  for (int s=0; s<4; s++) {
+// number of suits is 4*playernum
+arena_t *newArena(int playernum) {
+  // suit list will be 4*playernum elements long
+  arena_t *A = malloc(sizeof(arena_t) + sizeof(stAck_t *)*4*playernum);
+  for (int s=0; s<(4*playernum); s++) {
     A->suit[s] = newStack(s);
   }
+  // length of suit array
+  A->suitlen = 4*playernum;
   return A;
 }
 
@@ -322,7 +328,7 @@ void putStack(stAck_t *stack) {
 }
 
 void putArena(arena_t *A) {
-  for (int s=0; s<4; s++) {
+  for (int s=0; s<A->suitlen; s++) {
     putColorOfSuit(s);
     putSuit(s);
     putBack();
@@ -349,19 +355,24 @@ void putSolitaire(solitaire_t *S) {
 
 int play(card_t *card, arena_t *arena, solitaire_t *S) {
   stAck_t *stack = card->stack;
-  stAck_t *pile = arena->suit[card->suit];
   if (isTop(card)) {
-    if (isEmpty(pile)) {
-      if (isAce(card)) {
-        push(pop(stack),pile);
-        maybeFlip(stack,S);
-        return SUCCESS;
-      }
-    } else {
-      if (card->face == top(pile)->face+1) {
-        push(pop(stack),pile);
-        maybeFlip(stack,S);
-        return SUCCESS;
+    // the number of decks 'card' can go into is the same as the
+    // number of players. We must check all of these decks. 
+    int playernum = (arena->suitlen)/4;
+    for (int i = card->suit; i < arena->suitlen; i += 4){ 
+      stAck_t *pile = arena->suit[card->suit];
+      if (isEmpty(pile)) {
+        if (isAce(card)) {
+          push(pop(stack),pile);
+          maybeFlip(stack,S);
+          return SUCCESS;
+        }
+      } else {
+        if (card->face == top(pile)->face+1) {
+          push(pop(stack),pile);
+          maybeFlip(stack,S);
+          return SUCCESS;
+        }
       }
     }
   }
@@ -427,6 +438,7 @@ typedef struct _client_t {
     int id;
     int connection;
     struct sockaddr_in address;
+    arena_t *A;
 } client_t;
 
 void *solitaire_session(void *ci) {
@@ -445,16 +457,12 @@ void *solitaire_session(void *ci) {
     gettimeofday(&tp,NULL); 
     unsigned long seed = tp.tv_sec;
     char buffer[MAXLINE];
-    printf("seed: %lu\n",seed);
+    printf("client %d seed: %lu\n",id,seed);
     sprintf(buffer, "%lu", seed);
     write(connfd, buffer,strlen(buffer)+1);
     // make deck
     solitaire_t *S = newSolitaire(seed);
-    arena_t *A = newArena();
-    
-    for (int s=0; s<4; s++) {
-      A->suit[s] = newStack(s);
-    }
+    arena_t *A = client->A;
       
     // main game loop
     int recvlen;
@@ -651,6 +659,11 @@ int main(int argc, char **argv) {
   pthread_cancel(listener_id);
   pthread_mutex_unlock(&cam);
   
+  // make arena
+  arena_t *A = newArena(clients);
+  for (int s=0; s<A->suitlen; s++) {
+    A->suit[s] = newStack(s);
+  }
 
   pthread_t ids[clients];
 
