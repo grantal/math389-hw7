@@ -145,17 +145,17 @@ void putBack() {
   // printf("%s",neutralbg);
 }
 
-void writeRed(char *string) {
-  sprintf(string,"%s",red);
+void writeRed(char *s) {
+  sprintf(s+strlen(s),"%s",red);
 }
 
-void writeBlack(char *string) {
-  sprintf(string,"%s",black);
+void writeBlack(char *s) {
+  sprintf(s+strlen(s),"%s",black);
 }
 
 
-void writeBack(char *string) {
-  sprintf(string,"%s",neutral);
+void writeBack(char *s) {
+  sprintf(s + strlen(s),"%s",neutral);
 }
 
 void putColorOfSuit(int s) {
@@ -178,16 +178,16 @@ void putSuit(int s) {
   printf("%s",suit[s]);
 }
 
-void writeSuit(int s, char *string) {
-  sprintf(string,"%s",suit[s]);
+void writeSuit(int s, char *str) {
+  sprintf(str+strlen(str),"%s",suit[s]);
 }
 
 void putFace(int f) {
   printf("%s",face[f]);
 }
 
-void writeFace(int f, char *string) {
-  printf("%s",face[f]);
+void writeFace(int f, char *s) {
+  sprintf(s+strlen(s),"%s",face[f]);
 }
 
 void putCard(card_t *c) {
@@ -373,8 +373,8 @@ void putStack(stAck_t *stack) {
 void writeStack(stAck_t *stack, char *string) {
   card_t *c = stack->top;
   while (c != NULL) {
-    putCard(c);
-    sprintf(string," ");
+    writeCard(c,string);
+    sprintf(string + strlen(string)," ");
     c = c->below;
   }
 }
@@ -395,9 +395,9 @@ void writeArena(arena_t *A, char *string) {
     writeColorOfSuit(s%4, string);
     writeSuit(s%4,string);
     writeBack(string);
-    sprintf(string,": ");
+    sprintf(string + strlen(string),": ");
     writeStack(A->suit[s],string);
-    sprintf(string,"\n");
+    sprintf(string + strlen(string),"\n");
   }
 }
 
@@ -596,8 +596,8 @@ void *lurker_session(void *ci) {
     client_t *client = (client_t *)ci;
     int connfd = client->connection;
     arena_t *A = client->A;
-    char response[MAXLINE];
     while(1){
+        char response[MAXLINE];
         writeArena(A,response);
         printf("%s",response);
         write(connfd, response,strlen(response)+1);
