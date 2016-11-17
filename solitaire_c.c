@@ -462,6 +462,9 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
+  // tell server we want to play
+  write(clientfd,"PLAYER",strlen("PLAYER")+1);
+
   unsigned char *ip;
   ip = (unsigned char *)&serveraddr.sin_addr.s_addr;
   // confirm connection worked
