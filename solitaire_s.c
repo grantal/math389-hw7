@@ -532,6 +532,9 @@ void *solitaire_session(void *ci) {
   return NULL;
     
 }
+void *lurker_session(void *ci) {
+    
+}
 
 
 typedef struct _clistener_t {
@@ -678,9 +681,16 @@ int main(int argc, char **argv) {
   pthread_cancel(listener_id);
   pthread_mutex_unlock(&cam);
 
+  // find out how many clients are players
+  int playernum = 0;
+  for (int i = 0; i < clients; i++){
+    if (clientarray[i]->type == PLAYER){
+      playernum++;
+    }
+  } 
   
   // make arena
-  arena_t *A = newArena(clients);
+  arena_t *A = newArena(playernum);
   for (int s=0; s<A->suitlen; s++) {
     A->suit[s] = newStack(s);
   }
@@ -696,7 +706,11 @@ int main(int argc, char **argv) {
     clientarray[i]->A = A;
     clientarray[i]->arem = arem;
     pthread_t tid;
-    pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
+    if (clientarray[i]->type == PLAYER){
+        pthread_create(&tid,NULL,solitaire_session,(void *)clientarray[i]);
+    } else {
+        pthread_create(&tid,NULL,lurker_session,(void *)clientarray[i]);
+    }
     ids[i] = tid;
   }
 
