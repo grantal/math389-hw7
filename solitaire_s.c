@@ -599,7 +599,6 @@ void *lurker_session(void *ci) {
     while(1){
         char response[MAXLINE];
         writeArena(A,response);
-        printf("%s",response);
         write(connfd, response,strlen(response)+1);
         sleep(3);
     }

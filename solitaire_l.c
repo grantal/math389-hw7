@@ -89,8 +89,8 @@ int main(int argc, char **argv)
       break;
     }
 
-    // Output the response to the user.
-    fputs(buffer, stdout);
+    // Output the arena to the user.
+    printf("Arena:\n%s",buffer);
   }
 
   //
