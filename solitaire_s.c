@@ -145,6 +145,19 @@ void putBack() {
   // printf("%s",neutralbg);
 }
 
+void writeRed(char *string) {
+  sprintf(string,"%s",red);
+}
+
+void writeBlack(char *string) {
+  sprintf(string,"%s",black);
+}
+
+
+void writeBack(char *string) {
+  sprintf(string,"%s",neutral);
+}
+
 void putColorOfSuit(int s) {
   if (s % 2 == RED) {
     putRed();
@@ -153,11 +166,27 @@ void putColorOfSuit(int s) {
   }
 }
 
+void writeColorOfSuit(int s, char *string) {
+  if (s % 2 == RED) {
+    writeRed(string);
+  } else {
+    writeBlack(string);
+  }
+}
+
 void putSuit(int s) {
   printf("%s",suit[s]);
 }
 
+void writeSuit(int s, char *string) {
+  sprintf(string,"%s",suit[s]);
+}
+
 void putFace(int f) {
+  printf("%s",face[f]);
+}
+
+void writeFace(int f, char *string) {
   printf("%s",face[f]);
 }
 
@@ -170,6 +199,17 @@ void putCard(card_t *c) {
   putFace(c->face);
   putSuit(c->suit);
   putBack();
+}
+
+void writeCard(card_t *c, char *string) {
+  if (isRed(c)) {
+    writeRed(string);
+  } else {
+    writeBlack(string);
+  }
+  writeFace(c->face,string);
+  writeSuit(c->suit,string);
+  writeBack(string);
 }
 
 int isEmpty(stAck_t *stack) {
@@ -330,6 +370,15 @@ void putStack(stAck_t *stack) {
   }
 }
 
+void writeStack(stAck_t *stack, char *string) {
+  card_t *c = stack->top;
+  while (c != NULL) {
+    putCard(c);
+    sprintf(string," ");
+    c = c->below;
+  }
+}
+
 void putArena(arena_t *A) {
   for (int s=0; s<A->suitlen; s++) {
     putColorOfSuit(s%4);
@@ -338,6 +387,17 @@ void putArena(arena_t *A) {
     printf(": ");
     putStack(A->suit[s]);
     printf("\n");
+  }
+}
+
+void writeArena(arena_t *A, char *string) {
+  for (int s=0; s<A->suitlen; s++) {
+    writeColorOfSuit(s%4, string);
+    writeSuit(s%4,string);
+    writeBack(string);
+    sprintf(string,": ");
+    writeStack(A->suit[s],string);
+    sprintf(string,"\n");
   }
 }
 
@@ -533,7 +593,19 @@ void *solitaire_session(void *ci) {
     
 }
 void *lurker_session(void *ci) {
-    
+    client_t *client = (client_t *)ci;
+    int connfd = client->connection;
+    arena_t *A = client->A;
+    char response[MAXLINE];
+    while(1){
+        writeArena(A,response);
+        printf("%s",response);
+        write(connfd, response,strlen(response)+1);
+        sleep(3);
+    }
+
+    close(connfd);
+    return NULL;
 }
 
 
