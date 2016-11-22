@@ -89,8 +89,11 @@ int main(int argc, char **argv)
       break;
     }
 
+    // be polite to the server
+    write(clientfd,"THANKS",strlen("THANKS")+1);
+    
     // Output the arena to the user.
-    printf("Arena:\n%s",buffer);
+    printf("%s",buffer);
   }
 
   //

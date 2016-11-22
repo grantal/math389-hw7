@@ -503,6 +503,7 @@ typedef struct _client_t {
     arena_t *A;
     pthread_mutex_t arem; //arena mutex
     int type; // ie player or lurker
+    unsigned long seed;
 } client_t;
 
 void *solitaire_session(void *ci) {
@@ -517,10 +518,8 @@ void *solitaire_session(void *ci) {
   // Play Solitaire
   //
     
-    //make seed and send it
-    struct timeval tp; 
-    gettimeofday(&tp,NULL); 
-    unsigned long seed = tp.tv_sec;
+    //send seed
+    unsigned long seed = client->seed;
     char buffer[MAXLINE];
     printf("client %d seed: %lu\n",id,seed);
     sprintf(buffer, "%lu", seed);
@@ -596,12 +595,15 @@ void *lurker_session(void *ci) {
     client_t *client = (client_t *)ci;
     int connfd = client->connection;
     arena_t *A = client->A;
-    while(1){
+    char buffer[MAXLINE];
+    int recvlen;
+    do {
+        sleep(3);
         char response[MAXLINE];
+        sprintf(response,"Arena:\n");
         writeArena(A,response);
         write(connfd, response,strlen(response)+1);
-        sleep(3);
-    }
+    } while((recvlen = read(connfd, buffer, MAXLINE)) != 0);
 
     close(connfd);
     return NULL;
@@ -651,6 +653,11 @@ void *client_listen(void *cl) {
     recvlen = read(client->connection,  buffer, MAXLINE);
     if (strcmp("PLAYER", buffer) == 0){
         client->type = PLAYER; 
+        // generate seeds as clients connect, because if you 
+        // generate them at game start, all the seeds are the same
+        struct timeval tp; 
+        gettimeofday(&tp,NULL); 
+        client->seed = (unsigned long)tp.tv_sec;
     } else if (strcmp("LURKER", buffer) == 0){
         client->type = LURKER;
     }
