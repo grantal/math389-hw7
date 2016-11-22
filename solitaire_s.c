@@ -601,7 +601,9 @@ void *lurker_session(void *ci) {
         sleep(3);
         char response[MAXLINE];
         sprintf(response,"Arena:\n");
+        pthread_mutex_lock(&client->arem);
         writeArena(A,response);
+        pthread_mutex_unlock(&client->arem);
         write(connfd, response,strlen(response)+1);
     } while((recvlen = read(connfd, buffer, MAXLINE)) != 0);
 
