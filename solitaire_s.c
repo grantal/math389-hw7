@@ -1,3 +1,8 @@
+//TODO:
+//pthread condition variable for lurkers for arena changes
+//Add don't accept clients flag to client listener
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
